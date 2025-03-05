@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote Control Panel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        .form-group button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .form-group button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Remote Control Panel</h1>
+
+        <div class="form-group">
+            <label for="clickText">Click Text:</label>
+            <input type="text" id="clickText" placeholder="Enter text to click">
+            <button onclick="sendClick()">Click</button>
+        </div>
+
+        <div class="form-group">
+            <label for="inputText">Input Text:</label>
+            <input type="text" id="inputText" placeholder="Enter text to input">
+            <button onclick="sendTextInput()">Input</button>
+        </div>
+
+        <div class="form-group">
+            <label for="swipeCoordinates">Swipe Coordinates (startX,startY,endX,endY):</label>
+            <input type="text" id="swipeCoordinates" placeholder="Enter coordinates for swipe">
+            <button onclick="sendSwipe()">Swipe</button>
+        </div>
+
+        <div class="form-group">
+            <label for="keyPress">Key Press:</label>
+            <input type="text" id="keyPress" placeholder="Enter key (e.g., enter, back, home)">
+            <button onclick="sendKeyPress()">Press Key</button>
+        </div>
+
+        <div class="form-group">
+            <label for="screenshot">Screenshot:</label>
+            <button onclick="requestScreenshot()">Request Screenshot</button>
+            <div id="screenshotDisplay"></div>
+        </div>
+    </div>
+
+    <script>
+        const ws = new WebSocket('ws://192.168.1.100:8080');
+
+        ws.onopen = () => {
+            console.log('WebSocket connected');
+        };
+
+        ws.onmessage = (event) => {
+            if (event.data instanceof Blob) {
+                const blob = event.data;
+                const url = URL.createObjectURL(blob);
+                const img = document.createElement('img');
+                img.src = url;
+                document.getElementById('screenshotDisplay').innerHTML = '';
+                document.getElementById('screenshotDisplay').appendChild(img);
+            } else {
+                console.log('Received message:', event.data);
+            }
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+        ws.onclose = () => {
+            console.log('WebSocket closed');
+        };
+
+        function sendClick() {
+            const text = document.getElementById('clickText').value;
+            ws.send(`click:${text}`);
+        }
+
+        function sendTextInput() {
+            const text = document.getElementById('inputText').value;
+            ws.send(`text:${text}`);
+        }
+
+        function sendSwipe() {
+            const coordinates = document.getElementById('swipeCoordinates').value;
+            ws.send(`swipe:${coordinates}`);
+        }
+
+        function sendKeyPress() {
+            const key = document.getElementById('keyPress').value;
+            ws.send(`key:${key}`);
+        }
+
+        function requestScreenshot() {
+            ws.send('screenshot');
+        }
+    </script>
+</body>
+</html>
