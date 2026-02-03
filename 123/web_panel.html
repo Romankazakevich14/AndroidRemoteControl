@@ -1,137 +1,533 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Remote Control Panel</title>
+    <title>Панель трансляции и управления экраном</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f0f0f0;
+        :root {
+            color-scheme: light;
+            --bg: #0f172a;
+            --panel: #111827;
+            --card: #1f2937;
+            --muted: #9ca3af;
+            --text: #f9fafb;
+            --accent: #38bdf8;
+            --accent-strong: #0ea5e9;
+            --danger: #f97316;
+            --success: #22c55e;
+            font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
         }
-        .container {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-        }
-        .form-group input, .form-group textarea {
-            width: 100%;
-            padding: 8px;
+
+        * {
             box-sizing: border-box;
         }
-        .form-group button {
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
         }
-        .form-group button:hover {
-            background-color: #0056b3;
+
+        header {
+            padding: 24px clamp(16px, 4vw, 48px);
+            background: linear-gradient(120deg, #0f172a, #1e293b);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        header h1 {
+            margin: 0 0 8px;
+            font-size: clamp(20px, 4vw, 32px);
+        }
+
+        header p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 15px;
+        }
+
+        main {
+            display: grid;
+            gap: 24px;
+            grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+            padding: 24px clamp(16px, 4vw, 48px) 40px;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+        }
+
+        .section-title {
+            margin: 0 0 16px;
+            font-size: 18px;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ef4444;
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.8);
+        }
+
+        .status.connected .status-indicator {
+            background: var(--success);
+            box-shadow: 0 0 8px rgba(34, 197, 94, 0.8);
+        }
+
+        .connection-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            background: #0b1220;
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        textarea {
+            min-height: 90px;
+            resize: vertical;
+        }
+
+        button {
+            border: none;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            background: var(--accent);
+            color: #082f49;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(56, 189, 248, 0.35);
+        }
+
+        button.secondary {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid rgba(148, 163, 184, 0.4);
+        }
+
+        button.danger {
+            background: var(--danger);
+            color: #451a03;
+        }
+
+        .stream-wrapper {
+            position: relative;
+            border-radius: 18px;
+            overflow: hidden;
+            background: #020617;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            min-height: 320px;
+        }
+
+        #streamCanvas {
+            width: 100%;
+            display: block;
+            background: #020617;
+        }
+
+        .overlay-hint {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 24px;
+            color: var(--muted);
+            background: rgba(2, 6, 23, 0.72);
+            font-size: 15px;
+        }
+
+        .controls {
+            display: grid;
+            gap: 14px;
+        }
+
+        .controls .row {
+            display: grid;
+            gap: 10px;
+        }
+
+        .controls .row.two {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .controls .row.three {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .chip-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .chip {
+            background: rgba(148, 163, 184, 0.1);
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .log {
+            background: #0b1220;
+            border-radius: 12px;
+            padding: 12px;
+            max-height: 200px;
+            overflow: auto;
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .log p {
+            margin: 0 0 8px;
+        }
+
+        .log p:last-child {
+            margin-bottom: 0;
+        }
+
+        @media (max-width: 960px) {
+            main {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Remote Control Panel</h1>
+    <header>
+        <h1>Панель трансляции и управления экраном</h1>
+        <p>Подключитесь к устройству через WebSocket, смотрите трансляцию и отправляйте команды управления.</p>
+    </header>
 
-        <div class="form-group">
-            <label for="clickText">Click Text:</label>
-            <input type="text" id="clickText" placeholder="Enter text to click">
-            <button onclick="sendClick()">Click</button>
-        </div>
+    <main>
+        <section class="card">
+            <h2 class="section-title">Трансляция</h2>
+            <div class="stream-wrapper" id="streamWrapper">
+                <canvas id="streamCanvas"></canvas>
+                <div class="overlay-hint" id="streamHint">
+                    Подключитесь к устройству, чтобы увидеть трансляцию. Используйте клики и жесты по экрану для управления.
+                </div>
+            </div>
+            <div class="chip-group" style="margin-top: 16px;">
+                <span class="chip">Один клик — тап</span>
+                <span class="chip">Зажмите и потяните — свайп</span>
+                <span class="chip">Колесо мыши — скролл</span>
+            </div>
+        </section>
 
-        <div class="form-group">
-            <label for="inputText">Input Text:</label>
-            <input type="text" id="inputText" placeholder="Enter text to input">
-            <button onclick="sendTextInput()">Input</button>
-        </div>
+        <aside class="card controls">
+            <div>
+                <h2 class="section-title">Подключение</h2>
+                <div class="status" id="connectionStatus">
+                    <span class="status-indicator"></span>
+                    <span>Отключено</span>
+                </div>
+                <div class="connection-grid" style="margin-top: 12px;">
+                    <div>
+                        <label for="wsUrl">WebSocket URL</label>
+                        <input id="wsUrl" type="text" value="ws://192.168.1.100:8080" />
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: flex-end;">
+                        <button id="connectBtn">Подключить</button>
+                        <button id="disconnectBtn" class="secondary">Отключить</button>
+                    </div>
+                </div>
+            </div>
 
-        <div class="form-group">
-            <label for="swipeCoordinates">Swipe Coordinates (startX,startY,endX,endY):</label>
-            <input type="text" id="swipeCoordinates" placeholder="Enter coordinates for swipe">
-            <button onclick="sendSwipe()">Swipe</button>
-        </div>
+            <div>
+                <h2 class="section-title">Быстрые действия</h2>
+                <div class="row three">
+                    <button data-key="back" class="secondary">Назад</button>
+                    <button data-key="home" class="secondary">Домой</button>
+                    <button data-key="recents" class="secondary">Недавние</button>
+                </div>
+                <div class="row two">
+                    <button id="volumeUp" class="secondary">Громче</button>
+                    <button id="volumeDown" class="secondary">Тише</button>
+                </div>
+            </div>
 
-        <div class="form-group">
-            <label for="keyPress">Key Press:</label>
-            <input type="text" id="keyPress" placeholder="Enter key (e.g., enter, back, home)">
-            <button onclick="sendKeyPress()">Press Key</button>
-        </div>
+            <div>
+                <h2 class="section-title">Текст и команды</h2>
+                <div class="row">
+                    <label for="textInput">Ввод текста</label>
+                    <input id="textInput" type="text" placeholder="Например: привет" />
+                    <button id="sendText">Отправить текст</button>
+                </div>
+                <div class="row">
+                    <label for="customCommand">Пользовательская команда</label>
+                    <input id="customCommand" type="text" placeholder="например: key:enter" />
+                    <button id="sendCommand" class="secondary">Отправить</button>
+                </div>
+            </div>
 
-        <div class="form-group">
-            <label for="screenshot">Screenshot:</label>
-            <button onclick="requestScreenshot()">Request Screenshot</button>
-            <div id="screenshotDisplay"></div>
-        </div>
-    </div>
+            <div>
+                <h2 class="section-title">Снимок экрана</h2>
+                <div class="row two">
+                    <button id="requestShot">Запросить скриншот</button>
+                    <button id="clearShot" class="secondary">Очистить</button>
+                </div>
+            </div>
+
+            <div>
+                <h2 class="section-title">Лог</h2>
+                <div class="log" id="log"></div>
+            </div>
+        </aside>
+    </main>
 
     <script>
-        const ws = new WebSocket('ws://192.168.1.100:8080');
+        const streamCanvas = document.getElementById('streamCanvas');
+        const streamHint = document.getElementById('streamHint');
+        const streamWrapper = document.getElementById('streamWrapper');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const logContainer = document.getElementById('log');
+        const wsUrlInput = document.getElementById('wsUrl');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const textInput = document.getElementById('textInput');
+        const customCommand = document.getElementById('customCommand');
+        const sendTextBtn = document.getElementById('sendText');
+        const sendCommandBtn = document.getElementById('sendCommand');
+        const requestShotBtn = document.getElementById('requestShot');
+        const clearShotBtn = document.getElementById('clearShot');
+        const keyButtons = document.querySelectorAll('[data-key]');
+        const volumeUpBtn = document.getElementById('volumeUp');
+        const volumeDownBtn = document.getElementById('volumeDown');
 
-        ws.onopen = () => {
-            console.log('WebSocket connected');
+        const canvasContext = streamCanvas.getContext('2d');
+
+        let socket = null;
+        let streamSize = { width: 1280, height: 720 };
+        let isDragging = false;
+        let dragStart = null;
+
+        const resizeCanvas = () => {
+            const { width } = streamWrapper.getBoundingClientRect();
+            const aspect = streamSize.height / streamSize.width;
+            streamCanvas.width = streamSize.width;
+            streamCanvas.height = streamSize.height;
+            streamCanvas.style.height = `${width * aspect}px`;
         };
 
-        ws.onmessage = (event) => {
-            if (event.data instanceof Blob) {
-                const blob = event.data;
-                const url = URL.createObjectURL(blob);
-                const img = document.createElement('img');
-                img.src = url;
-                document.getElementById('screenshotDisplay').innerHTML = '';
-                document.getElementById('screenshotDisplay').appendChild(img);
-            } else {
-                console.log('Received message:', event.data);
+        const appendLog = (message) => {
+            const entry = document.createElement('p');
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.prepend(entry);
+        };
+
+        const setStatus = (connected) => {
+            connectionStatus.classList.toggle('connected', connected);
+            connectionStatus.querySelector('span:last-child').textContent = connected
+                ? 'Подключено'
+                : 'Отключено';
+        };
+
+        const sendMessage = (payload) => {
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                appendLog('Невозможно отправить команду: нет соединения.');
+                return;
+            }
+            socket.send(payload);
+        };
+
+        const connect = () => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                return;
+            }
+            const url = wsUrlInput.value.trim();
+            if (!url) {
+                appendLog('Введите адрес WebSocket.');
+                return;
+            }
+            socket = new WebSocket(url);
+            socket.binaryType = 'arraybuffer';
+
+            socket.addEventListener('open', () => {
+                setStatus(true);
+                streamHint.style.display = 'none';
+                appendLog(`Соединение установлено: ${url}`);
+                sendMessage('hello');
+            });
+
+            socket.addEventListener('message', (event) => {
+                if (typeof event.data === 'string') {
+                    handleTextMessage(event.data);
+                    return;
+                }
+                if (event.data instanceof ArrayBuffer) {
+                    const blob = new Blob([event.data]);
+                    renderFrameFromBlob(blob);
+                }
+            });
+
+            socket.addEventListener('close', () => {
+                setStatus(false);
+                streamHint.style.display = 'flex';
+                appendLog('Соединение закрыто.');
+            });
+
+            socket.addEventListener('error', () => {
+                appendLog('Ошибка WebSocket.');
+            });
+        };
+
+        const disconnect = () => {
+            if (socket) {
+                socket.close();
             }
         };
 
-        ws.onerror = (error) => {
-            console.error('WebSocket error:', error);
+        const handleTextMessage = (message) => {
+            appendLog(`Сообщение: ${message}`);
+            if (message.startsWith('size:')) {
+                const [, size] = message.split(':');
+                const [width, height] = size.split('x').map(Number);
+                if (width && height) {
+                    streamSize = { width, height };
+                    resizeCanvas();
+                }
+            }
         };
 
-        ws.onclose = () => {
-            console.log('WebSocket closed');
+        const renderFrameFromBlob = (blob) => {
+            const url = URL.createObjectURL(blob);
+            const image = new Image();
+            image.onload = () => {
+                streamSize = { width: image.width, height: image.height };
+                resizeCanvas();
+                canvasContext.drawImage(image, 0, 0, streamCanvas.width, streamCanvas.height);
+                URL.revokeObjectURL(url);
+            };
+            image.src = url;
         };
 
-        function sendClick() {
-            const text = document.getElementById('clickText').value;
-            ws.send(`click:${text}`);
-        }
+        const normalizePoint = (clientX, clientY) => {
+            const rect = streamCanvas.getBoundingClientRect();
+            const x = Math.round(((clientX - rect.left) / rect.width) * streamSize.width);
+            const y = Math.round(((clientY - rect.top) / rect.height) * streamSize.height);
+            return { x, y };
+        };
 
-        function sendTextInput() {
-            const text = document.getElementById('inputText').value;
-            ws.send(`text:${text}`);
-        }
+        const onPointerDown = (event) => {
+            if (event.button !== 0) {
+                return;
+            }
+            isDragging = true;
+            dragStart = normalizePoint(event.clientX, event.clientY);
+        };
 
-        function sendSwipe() {
-            const coordinates = document.getElementById('swipeCoordinates').value;
-            ws.send(`swipe:${coordinates}`);
-        }
+        const onPointerUp = (event) => {
+            if (!isDragging || !dragStart) {
+                return;
+            }
+            const dragEnd = normalizePoint(event.clientX, event.clientY);
+            const distance = Math.hypot(dragEnd.x - dragStart.x, dragEnd.y - dragStart.y);
+            if (distance < 10) {
+                sendMessage(`tap:${dragStart.x},${dragStart.y}`);
+            } else {
+                sendMessage(`swipe:${dragStart.x},${dragStart.y},${dragEnd.x},${dragEnd.y}`);
+            }
+            isDragging = false;
+            dragStart = null;
+        };
 
-        function sendKeyPress() {
-            const key = document.getElementById('keyPress').value;
-            ws.send(`key:${key}`);
-        }
+        const onWheel = (event) => {
+            const delta = Math.sign(event.deltaY);
+            if (delta !== 0) {
+                sendMessage(`scroll:${delta}`);
+            }
+        };
 
-        function requestScreenshot() {
-            ws.send('screenshot');
-        }
+        connectBtn.addEventListener('click', connect);
+        disconnectBtn.addEventListener('click', disconnect);
+
+        sendTextBtn.addEventListener('click', () => {
+            const text = textInput.value.trim();
+            if (text) {
+                sendMessage(`text:${text}`);
+                textInput.value = '';
+            }
+        });
+
+        sendCommandBtn.addEventListener('click', () => {
+            const command = customCommand.value.trim();
+            if (command) {
+                sendMessage(command);
+                customCommand.value = '';
+            }
+        });
+
+        requestShotBtn.addEventListener('click', () => {
+            sendMessage('screenshot');
+        });
+
+        clearShotBtn.addEventListener('click', () => {
+            canvasContext.clearRect(0, 0, streamCanvas.width, streamCanvas.height);
+            streamHint.style.display = 'flex';
+        });
+
+        keyButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                sendMessage(`key:${button.dataset.key}`);
+            });
+        });
+
+        volumeUpBtn.addEventListener('click', () => {
+            sendMessage('key:volume_up');
+        });
+
+        volumeDownBtn.addEventListener('click', () => {
+            sendMessage('key:volume_down');
+        });
+
+        streamCanvas.addEventListener('pointerdown', onPointerDown);
+        streamCanvas.addEventListener('pointerup', onPointerUp);
+        streamCanvas.addEventListener('pointerleave', () => {
+            isDragging = false;
+            dragStart = null;
+        });
+        streamCanvas.addEventListener('wheel', onWheel);
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
     </script>
 </body>
 </html>
